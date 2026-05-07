@@ -14,7 +14,8 @@ namespace TurretDemo.EditorTools
     /// </summary>
     public static class TurretDemoSceneBuilder
     {
-        private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
+        private const string SampleScenePath = "Assets/Scenes/SampleTurret.unity";
+        private const string LegacySampleScenePath = "Assets/Scenes/SampleScene.unity";
         private const string ProjectilePrefabPath = "Assets/Prefabs/Turret/Projectile.prefab";
         private const string EnemyPrefabPath = "Assets/Prefabs/Turret/Enemy.prefab";
 
@@ -38,7 +39,7 @@ namespace TurretDemo.EditorTools
 
         private static void BuildInternal()
         {
-            Scene scene = EditorSceneManager.OpenScene(SampleScenePath, OpenSceneMode.Single);
+            Scene scene = EditorSceneManager.OpenScene(ResolveScenePath(), OpenSceneMode.Single);
             RemovePreviousDemoRoots();
 
             GameObject shootingFloor = CreatePrimitiveCube("ShootingRangeFloor", PrimitiveType.Cube);
@@ -156,6 +157,30 @@ namespace TurretDemo.EditorTools
             AssetDatabase.SaveAssets();
 
             Debug.Log("[TurretDemo] Build 완료: SampleScene 저장, Projectile 프리팹 생성. Play Mode로 동작을 확인하세요.");
+        }
+
+        private static string ResolveScenePath()
+        {
+            if (File.Exists(SampleScenePath))
+            {
+                return SampleScenePath;
+            }
+
+            // 과거 씬 이름(SampleScene)도 호환해 기존 프로젝트 설정이 깨지지 않게 처리합니다.
+            if (File.Exists(LegacySampleScenePath))
+            {
+                return LegacySampleScenePath;
+            }
+
+            string scenesDirectory = Path.GetDirectoryName(SampleScenePath);
+            if (!string.IsNullOrEmpty(scenesDirectory) && !Directory.Exists(scenesDirectory))
+            {
+                Directory.CreateDirectory(scenesDirectory);
+            }
+
+            Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            EditorSceneManager.SaveScene(newScene, SampleScenePath);
+            return SampleScenePath;
         }
 
         private static void RemovePreviousDemoRoots()
