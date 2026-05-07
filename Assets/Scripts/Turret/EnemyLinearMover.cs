@@ -38,7 +38,8 @@ namespace TurretDemo
             remainingLifeSeconds -= Time.deltaTime;
             if (remainingLifeSeconds <= 0f)
             {
-                Destroy(gameObject);
+                //Destroy(gameObject);
+                EnemySpawner.instance.ReturnObject(this.gameObject);
             }
         }
     }

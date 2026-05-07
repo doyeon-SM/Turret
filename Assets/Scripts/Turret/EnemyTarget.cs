@@ -87,7 +87,8 @@ namespace TurretDemo
                 CreateDeathMarker();
             }
 
-            Destroy(gameObject);
+            //Destroy(gameObject);
+            EnemySpawner.instance.ReturnObject(this.gameObject);
         }
 
         private void CreateDeathMarker()

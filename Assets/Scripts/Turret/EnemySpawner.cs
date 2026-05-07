@@ -46,8 +46,29 @@ namespace TurretDemo
         [Min(0.1f)]
         private float enemyLifeTimeSeconds = 10f;
 
-        private readonly List<GameObject> aliveEnemies = new List<GameObject>(32);
+        [SerializeField][Min(1)] private int poolSize = 6;
+
+        private Queue<GameObject> objectPool = new Queue<GameObject>();
+
+        //private readonly List<GameObject> aliveEnemies = new List<GameObject>(32);
         private float nextSpawnTimeSeconds;
+
+        public static EnemySpawner instance { get; private set; }
+
+        private void Awake()
+        {
+            if(instance == null)
+            {
+                instance = this;
+                DontDestroyOnLoad(this.gameObject);
+            }
+            else
+            {
+                Destroy(this.gameObject);
+            }
+
+            InitializePool();
+        }
 
         private void Start()
         {
@@ -62,20 +83,45 @@ namespace TurretDemo
 
         private void Update()
         {
-            RemoveDestroyedEntries();
+            //RemoveDestroyedEntries();
             if (Time.time < nextSpawnTimeSeconds)
             {
                 return;
             }
 
-            if (aliveEnemies.Count >= maxAliveCount)
+            /*if (aliveEnemies.Count >= maxAliveCount)
             {
                 return;
-            }
+            }*/
 
             if (TrySpawnOneEnemy())
             {
                 nextSpawnTimeSeconds = Time.time + spawnIntervalSeconds;
+            }
+        }
+
+        private void InitializePool()
+        {
+            for(int i=0;i<poolSize;i++)
+            {
+                Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+                if (spawnPoint == null)
+                {
+                    return;
+                }
+
+                Quaternion rotation = spawnPoint.rotation;
+                if (lookAtCenter != null)
+                {
+                    Vector3 toCenter = lookAtCenter.position - spawnPoint.position;
+                    if (toCenter.sqrMagnitude > 1e-8f)
+                    {
+                        rotation = Quaternion.LookRotation(toCenter.normalized, Vector3.up);
+                    }
+                }
+                GameObject obj = Instantiate(enemyPrefab, spawnPoint.position, rotation, enemyRoot);
+                obj.SetActive(false);
+                objectPool.Enqueue(obj);
             }
         }
 
@@ -85,13 +131,45 @@ namespace TurretDemo
             {
                 return false;
             }
-
-            Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
-            if (spawnPoint == null)
+            if(objectPool.Count <= 0 || !objectPool.TryPeek(out enemyPrefab))
             {
                 return false;
             }
 
+            
+
+            GameObject spawned = objectPool.Dequeue();
+            spawned.SetActive(true);
+            EnemyLinearMover mover = spawned.GetComponent<EnemyLinearMover>();
+            if (mover != null)
+            {
+                mover.Initialize(enemyMoveSpeedUnitsPerSecond, enemyLifeTimeSeconds);
+            }
+
+            //aliveEnemies.Add(spawned);
+            return true;
+        }
+
+        /*private void RemoveDestroyedEntries()
+        {
+            for (int index = aliveEnemies.Count - 1; index >= 0; index--)
+            {
+                if (aliveEnemies[index] == null)
+                {
+                    aliveEnemies.RemoveAt(index);
+                }
+            }
+        }*/
+
+        public void ReturnObject(GameObject obj)
+        {
+            if (objectPool.Contains(obj))
+                return;
+            Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            if (spawnPoint == null)
+            {
+                return;
+            }
             Quaternion rotation = spawnPoint.rotation;
             if (lookAtCenter != null)
             {
@@ -102,26 +180,11 @@ namespace TurretDemo
                 }
             }
 
-            GameObject spawned = Instantiate(enemyPrefab, spawnPoint.position, rotation, enemyRoot);
-            EnemyLinearMover mover = spawned.GetComponent<EnemyLinearMover>();
-            if (mover != null)
-            {
-                mover.Initialize(enemyMoveSpeedUnitsPerSecond, enemyLifeTimeSeconds);
-            }
-
-            aliveEnemies.Add(spawned);
-            return true;
-        }
-
-        private void RemoveDestroyedEntries()
-        {
-            for (int index = aliveEnemies.Count - 1; index >= 0; index--)
-            {
-                if (aliveEnemies[index] == null)
-                {
-                    aliveEnemies.RemoveAt(index);
-                }
-            }
+            obj.SetActive(false);
+            obj.transform.position = spawnPoint.position;
+            obj.transform.rotation = rotation;
+            
+            objectPool.Enqueue(obj);
         }
     }
 }
