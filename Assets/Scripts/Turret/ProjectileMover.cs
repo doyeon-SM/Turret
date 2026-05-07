@@ -25,6 +25,7 @@ namespace TurretDemo
         private int ownerTeamId;
 
         private float remainingLifeSeconds;
+        private PooledObjectLifecycle pooledObjectLifecycle;
 
         /// <summary>
         /// 인스턴스 생성 직후 속도·수명을 덮어씁니다.
@@ -42,6 +43,11 @@ namespace TurretDemo
 
         private void OnEnable()
         {
+            if (pooledObjectLifecycle == null)
+            {
+                pooledObjectLifecycle = GetComponent<PooledObjectLifecycle>();
+            }
+
             remainingLifeSeconds = lifeTimeSeconds;
         }
 
@@ -54,7 +60,7 @@ namespace TurretDemo
             remainingLifeSeconds -= Time.deltaTime;
             if (remainingLifeSeconds <= 0f)
             {
-                Destroy(gameObject);
+                ReturnToPoolOrDestroy();
             }
         }
 
@@ -73,6 +79,17 @@ namespace TurretDemo
             }
 
             enemyTarget.ApplyDamage(damageAmount);
+            ReturnToPoolOrDestroy();
+        }
+
+        private void ReturnToPoolOrDestroy()
+        {
+            if (pooledObjectLifecycle != null)
+            {
+                pooledObjectLifecycle.ReturnToPoolOrDestroy();
+                return;
+            }
+
             Destroy(gameObject);
         }
     }

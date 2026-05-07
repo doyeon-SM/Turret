@@ -60,6 +60,16 @@ namespace TurretDemo
         private float projectileDamage = 10f;
 
         [SerializeField]
+        [Min(1)]
+        [Tooltip("Projectile ObjectPool 기본 용량입니다.")]
+        private int projectilePoolDefaultCapacity = 32;
+
+        [SerializeField]
+        [Min(1)]
+        [Tooltip("Projectile ObjectPool 최대 용량입니다.")]
+        private int projectilePoolMaxSize = 256;
+
+        [SerializeField]
         [Tooltip("이 Turret의 팀 식별자입니다.")]
         private int turretTeamId;
 
@@ -251,6 +261,8 @@ namespace TurretDemo
                 projectileLifeTimeSeconds,
                 projectileDamage,
                 turretTeamId,
+                projectilePoolDefaultCapacity,
+                projectilePoolMaxSize,
                 projectileSpawnRoot);
 
             if (spawned == null)

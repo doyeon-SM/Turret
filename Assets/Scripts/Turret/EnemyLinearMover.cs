@@ -17,6 +17,7 @@ namespace TurretDemo
         private float lifeTimeSeconds = 10f;
 
         private float remainingLifeSeconds;
+        private PooledObjectLifecycle pooledObjectLifecycle;
 
         public void Initialize(float speedUnitsPerSecond, float lifeTime)
         {
@@ -27,6 +28,11 @@ namespace TurretDemo
 
         private void OnEnable()
         {
+            if (pooledObjectLifecycle == null)
+            {
+                pooledObjectLifecycle = GetComponent<PooledObjectLifecycle>();
+            }
+
             remainingLifeSeconds = lifeTimeSeconds;
         }
 
@@ -38,6 +44,12 @@ namespace TurretDemo
             remainingLifeSeconds -= Time.deltaTime;
             if (remainingLifeSeconds <= 0f)
             {
+                if (pooledObjectLifecycle != null)
+                {
+                    pooledObjectLifecycle.ReturnToPoolOrDestroy();
+                    return;
+                }
+
                 Destroy(gameObject);
             }
         }

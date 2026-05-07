@@ -33,6 +33,7 @@ namespace TurretDemo
         private Transform aimPoint;
 
         private float currentHealth;
+        private PooledObjectLifecycle pooledObjectLifecycle;
 
         public static IReadOnlyList<EnemyTarget> ActiveTargets => ActiveTargetsInternal;
 
@@ -46,6 +47,11 @@ namespace TurretDemo
 
         private void OnEnable()
         {
+            if (pooledObjectLifecycle == null)
+            {
+                pooledObjectLifecycle = GetComponent<PooledObjectLifecycle>();
+            }
+
             currentHealth = maxHealth;
 
             if (!ActiveTargetsInternal.Contains(this))
@@ -85,6 +91,12 @@ namespace TurretDemo
             if (showDeathMarker)
             {
                 CreateDeathMarker();
+            }
+
+            if (pooledObjectLifecycle != null)
+            {
+                pooledObjectLifecycle.ReturnToPoolOrDestroy();
+                return;
             }
 
             Destroy(gameObject);

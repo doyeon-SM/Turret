@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Pool;
 
 namespace TurretDemo
 {
@@ -46,8 +47,50 @@ namespace TurretDemo
         [Min(0.1f)]
         private float enemyLifeTimeSeconds = 10f;
 
+        [SerializeField]
+        [Min(1)]
+        [Tooltip("Enemy pool 기본 용량입니다.")]
+        private int poolDefaultCapacity = 8;
+
+        [SerializeField]
+        [Min(1)]
+        [Tooltip("Enemy pool이 유지할 최대 인스턴스 수.")]
+        private int poolMaxSize = 128;
+
         private readonly List<GameObject> aliveEnemies = new List<GameObject>(32);
+        private ObjectPool<GameObject> enemyPool;
         private float nextSpawnTimeSeconds;
+
+        private void Awake()
+        {
+            if (enemyPrefab == null)
+            {
+                return;
+            }
+
+            int defaultCapacity = Mathf.Max(Mathf.Max(initialSpawnCount, poolDefaultCapacity), 1);
+            int maxSize = Mathf.Max(poolMaxSize, defaultCapacity);
+            enemyPool = new ObjectPool<GameObject>(
+                createFunc: CreateEnemyInstance,
+                actionOnGet: enemy => enemy.SetActive(true),
+                actionOnRelease: enemy =>
+                {
+                    if (enemy != null)
+                    {
+                        enemy.SetActive(false);
+                    }
+                },
+                actionOnDestroy: enemy =>
+                {
+                    if (enemy != null)
+                    {
+                        Destroy(enemy);
+                    }
+                },
+                collectionCheck: false,
+                defaultCapacity: defaultCapacity,
+                maxSize: maxSize);
+        }
 
         private void Start()
         {
@@ -81,7 +124,7 @@ namespace TurretDemo
 
         private bool TrySpawnOneEnemy()
         {
-            if (enemyPrefab == null || spawnPoints == null || spawnPoints.Length == 0)
+            if (enemyPool == null || spawnPoints == null || spawnPoints.Length == 0)
             {
                 return false;
             }
@@ -102,7 +145,18 @@ namespace TurretDemo
                 }
             }
 
-            GameObject spawned = Instantiate(enemyPrefab, spawnPoint.position, rotation, enemyRoot);
+            GameObject spawned = enemyPool.Get();
+            spawned.transform.SetPositionAndRotation(spawnPoint.position, rotation);
+            spawned.transform.SetParent(enemyRoot);
+
+            PooledObjectLifecycle lifecycle = spawned.GetComponent<PooledObjectLifecycle>();
+            if (lifecycle == null)
+            {
+                lifecycle = spawned.AddComponent<PooledObjectLifecycle>();
+            }
+
+            lifecycle.SetReleaseAction(() => ReleaseEnemy(spawned));
+
             EnemyLinearMover mover = spawned.GetComponent<EnemyLinearMover>();
             if (mover != null)
             {
@@ -117,11 +171,30 @@ namespace TurretDemo
         {
             for (int index = aliveEnemies.Count - 1; index >= 0; index--)
             {
-                if (aliveEnemies[index] == null)
+                GameObject aliveEnemy = aliveEnemies[index];
+                if (aliveEnemy == null || !aliveEnemy.activeInHierarchy)
                 {
                     aliveEnemies.RemoveAt(index);
                 }
             }
+        }
+
+        private GameObject CreateEnemyInstance()
+        {
+            GameObject createdEnemy = Instantiate(enemyPrefab);
+            createdEnemy.SetActive(false);
+            return createdEnemy;
+        }
+
+        private void ReleaseEnemy(GameObject enemy)
+        {
+            if (enemy == null || enemyPool == null)
+            {
+                return;
+            }
+
+            aliveEnemies.Remove(enemy);
+            enemyPool.Release(enemy);
         }
     }
 }
