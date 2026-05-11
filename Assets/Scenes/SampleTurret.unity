@@ -826,6 +826,7 @@ MonoBehaviour:
   lookAtCenter: {fileID: 1886054607}
   enemyMoveSpeedUnitsPerSecond: 1
   enemyLifeTimeSeconds: 10
+  poolSize: 10
 --- !u!4 &976372151
 Transform:
   m_ObjectHideFlags: 0
